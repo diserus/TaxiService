@@ -9,9 +9,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -45,7 +45,7 @@ class DriverAssignmentConcurrencyTest extends AbstractIntegrationTest {
         ExecutorService pool = Executors.newFixedThreadPool(concurrency);
         CountDownLatch start = new CountDownLatch(1);
         Set<Long> assignedIds = ConcurrentHashMap.newKeySet();
-        Set<String> errors = ConcurrentHashMap.newKeySet();
+        AtomicInteger conflictCount = new AtomicInteger();
 
         Future<?>[] futures = new Future[concurrency];
         for (int i = 0; i < concurrency; i++) {
@@ -55,7 +55,7 @@ class DriverAssignmentConcurrencyTest extends AbstractIntegrationTest {
                     var assigned = driverService.assignAvailable();
                     assignedIds.add(assigned.getId());
                 } catch (ConflictException ex) {
-                    errors.add(ex.getMessage());
+                    conflictCount.incrementAndGet();
                 }
                 return null;
             });
@@ -67,10 +67,8 @@ class DriverAssignmentConcurrencyTest extends AbstractIntegrationTest {
         pool.shutdown();
 
         assertEquals(driverCount, assignedIds.size(),
-                "Each successful assignment must hand out a unique driver");
-        assertEquals(driverCount, new HashSet<>(assignedIds).size(),
-                "No duplicates in successful assignments");
-        assertEquals(concurrency - driverCount, errors.size(),
+                "Each successful assignment must hand out a unique driver (uniqueness is the key invariant)");
+        assertEquals(concurrency - driverCount, conflictCount.get(),
                 "Excess concurrent calls must get ConflictException 'No available drivers'");
 
         long busyCount = driverRepository.findAll().stream()

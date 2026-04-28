@@ -1,6 +1,6 @@
 package com.taxi.user;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.taxi.user.dto.LoginRequest;
 import com.taxi.user.dto.PassengerRequest;
 import org.junit.jupiter.api.Test;
@@ -48,7 +48,7 @@ class PassengerFlowTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.token_type").value("Bearer"));
 
         // Wrong password -> 401
-        LoginRequest bad = new LoginRequest("admin@taxi.com", "wrong");
+        LoginRequest bad = new LoginRequest("admin@taxi.com", "wrongpw");
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(bad)))
