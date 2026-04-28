@@ -34,7 +34,7 @@ subprojects {
 
     dependencies {
         // Spring Boot starters
-        implementation 'org.springframework.boot:spring-boot-starter-web'
+        implementation 'org.springframework.boot:spring-boot-starter-webmvc'
         implementation 'org.springframework.boot:spring-boot-starter-actuator'
         implementation 'org.springframework.boot:spring-boot-starter-validation'
 
@@ -43,6 +43,7 @@ subprojects {
         implementation 'io.swagger.core.v3:swagger-annotations:2.2.25'
         implementation 'jakarta.validation:jakarta.validation-api'
         implementation 'jakarta.annotation:jakarta.annotation-api'
+        implementation 'org.openapitools:jackson-databind-nullable:0.2.6'
 
         // Lombok
         compileOnly 'org.projectlombok:lombok'
