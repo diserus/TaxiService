@@ -4,6 +4,6 @@ VALUES (
     'Admin',
     'admin@taxi.com',
     '+70000000000',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'
+    '$2a$10$YYh.EKPirKXbk2/QE.pZ9um/Ua8BXzCUuYLcHmtYr6rhuRpTIuupS'
 )
 ON CONFLICT (email) DO NOTHING;
