@@ -1,0 +1,181 @@
+openapi: 3.1.0
+info:
+  title: Notification Service API
+  description: Очередь и доставка уведомлений (worker-pool, retries, DEAD-letter)
+  version: 1.0.0
+servers:
+  - url: http://localhost:8083
+    description: Local
+
+tags:
+  - name: notifications
+    description: Управление уведомлениями
+
+security:
+  - bearerAuth: []
+
+paths:
+  /notifications:
+    post:
+      tags: [notifications]
+      summary: Поставить задачу уведомления в очередь
+      operationId: enqueueNotification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+      responses:
+        '202':
+          description: Accepted (queued for processing)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    get:
+      tags: [notifications]
+      summary: Список уведомлений (с фильтрами)
+      operationId: listNotifications
+      parameters:
+        - name: trip_id
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/NotificationStatus'
+        - name: recipient_id
+          in: query
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationResponse'
+
+  /notifications/{id}:
+    get:
+      tags: [notifications]
+      summary: Получить уведомление по id
+      operationId: getNotification
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    RecipientType:
+      type: string
+      enum: [PASSENGER, DRIVER]
+
+    NotificationStatus:
+      type: string
+      enum: [PENDING, IN_PROGRESS, SENT, FAILED, DEAD]
+
+    NotificationRequest:
+      type: object
+      required: [trip_id, recipient_type, recipient_id, message]
+      properties:
+        trip_id:
+          type: integer
+          format: int64
+          minimum: 1
+        recipient_type:
+          $ref: '#/components/schemas/RecipientType'
+        recipient_id:
+          type: integer
+          format: int64
+          minimum: 1
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+
+    NotificationResponse:
+      type: object
+      required: [id, trip_id, recipient_type, recipient_id, message, status, attempts, created_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        trip_id:
+          type: integer
+          format: int64
+        recipient_type:
+          $ref: '#/components/schemas/RecipientType'
+        recipient_id:
+          type: integer
+          format: int64
+        message:
+          type: string
+        status:
+          $ref: '#/components/schemas/NotificationStatus'
+        attempts:
+          type: integer
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties:
+            type: string
