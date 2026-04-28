@@ -1,0 +1,5 @@
+rootProject.name = 'taxi-platform'
+
+include 'user-service'
+include 'trip-service'
+include 'notification-service'

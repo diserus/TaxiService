@@ -1,0 +1,44 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: notification-service
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:taxi}
+    username: ${POSTGRES_USER:taxi_user}
+    password: ${POSTGRES_PASSWORD:taxi_password}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+notification:
+  worker:
+    pool-size: ${NOTIFICATION_WORKER_POOL_SIZE:4}
+    poll-interval-ms: ${NOTIFICATION_WORKER_POLL_INTERVAL_MS:1000}
+    max-attempts: ${NOTIFICATION_MAX_ATTEMPTS:3}
+
+jwt:
+  secret: ${JWT_SECRET:change-me-in-production-this-must-be-at-least-256-bits-long-secret-key}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
