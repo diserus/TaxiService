@@ -4,7 +4,7 @@ CREATE TABLE passengers (
     email           VARCHAR(255) NOT NULL UNIQUE,
     phone           VARCHAR(20)  NOT NULL,
     password_hash   VARCHAR(255) NOT NULL,
-    created_at      TIMESTAMP    NOT NULL DEFAULT NOW()
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE drivers (
@@ -15,7 +15,7 @@ CREATE TABLE drivers (
     license_number  VARCHAR(50)  NOT NULL UNIQUE,
     password_hash   VARCHAR(255) NOT NULL,
     status          VARCHAR(20)  NOT NULL DEFAULT 'AVAILABLE',
-    created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_driver_status CHECK (status IN ('AVAILABLE', 'BUSY', 'OFFLINE'))
 );
 
