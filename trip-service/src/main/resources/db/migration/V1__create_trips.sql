@@ -8,8 +8,8 @@ CREATE TABLE trips (
     distance_km   NUMERIC(10,2) NOT NULL,
     price         NUMERIC(10,2),
     rating        SMALLINT     CHECK (rating BETWEEN 1 AND 5),
-    created_at    TIMESTAMP    NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMP    NOT NULL DEFAULT NOW(),
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_trip_status CHECK (status IN (
         'SEARCHING', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'
     ))

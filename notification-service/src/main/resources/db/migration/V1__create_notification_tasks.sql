@@ -7,8 +7,8 @@ CREATE TABLE notification_tasks (
     status         VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
     attempts       SMALLINT     NOT NULL DEFAULT 0,
     last_error     VARCHAR(1000),
-    created_at     TIMESTAMP    NOT NULL DEFAULT NOW(),
-    updated_at     TIMESTAMP    NOT NULL DEFAULT NOW(),
+    created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_notification_status CHECK (status IN (
         'PENDING', 'IN_PROGRESS', 'SENT', 'FAILED', 'DEAD'
     )),
