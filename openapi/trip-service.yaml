@@ -22,6 +22,18 @@ paths:
       tags: [trips]
       summary: Создать поездку (атомарно резервирует свободного водителя)
       operationId: createTrip
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: |
+            Опциональный ключ идемпотентности. Повторный POST с тем же значением
+            (для того же passenger_id) вернёт уже созданную поездку, а не создаст
+            новую. Защищает от дублей при ретраях клиента после разрыва связи.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
       requestBody:
         required: true
         content:

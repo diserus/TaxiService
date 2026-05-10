@@ -13,6 +13,7 @@ import com.taxi.trip.exception.NotFoundException;
 import com.taxi.trip.mapper.TripMapper;
 import com.taxi.trip.repository.TripRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class TripService {
 
@@ -36,8 +38,21 @@ public class TripService {
     @Value("${trip.tariff-rate}")
     private BigDecimal tariffRate;
 
+    @Value("${trip.assigned-ttl-seconds:60}")
+    private long assignedTtlSeconds;
+
+    public record CreateResult(TripResponse trip, boolean created) {}
+
     @Transactional
-    public TripResponse create(TripRequest request) {
+    public CreateResult create(TripRequest request, String idempotencyKey) {
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            var existing = repository.findByPassengerIdAndIdempotencyKey(
+                    request.getPassengerId(), idempotencyKey);
+            if (existing.isPresent()) {
+                return new CreateResult(mapper.toResponse(existing.get()), false);
+            }
+        }
+
         DriverDto driver = userGateway.reserveDriver();
 
         BigDecimal distance = BigDecimal.valueOf(request.getDistanceKm());
@@ -51,6 +66,7 @@ public class TripService {
                 .destination(request.getDestination())
                 .distanceKm(distance.setScale(2, RoundingMode.HALF_UP))
                 .price(price)
+                .idempotencyKey(idempotencyKey != null && !idempotencyKey.isBlank() ? idempotencyKey : null)
                 .build();
         repository.save(trip);
 
@@ -59,7 +75,7 @@ public class TripService {
         notificationGateway.enqueue(trip.getId(), "PASSENGER", request.getPassengerId(),
                 "Driver " + driver.name() + " is on the way");
 
-        return mapper.toResponse(trip);
+        return new CreateResult(mapper.toResponse(trip), true);
     }
 
     @Transactional(readOnly = true)
@@ -114,6 +130,47 @@ public class TripService {
         }
         trip.setRating(request.getRating().shortValue());
         return mapper.toResponse(trip);
+    }
+
+    /**
+     * Отменяет поездки, которые застряли в ASSIGNED дольше TTL (пассажир пропал/не подтвердил),
+     * и возвращает водителя в AVAILABLE. Вызывается скедулером.
+     */
+    @Transactional
+    public int cancelStuckAssigned() {
+        OffsetDateTime threshold = OffsetDateTime.now(ZoneOffset.UTC).minusSeconds(assignedTtlSeconds);
+        List<Trip> stuck = repository.findStuckAssigned(threshold);
+        int cancelled = 0;
+        for (Trip trip : stuck) {
+            if (trip.getStatus() != TripStatus.ASSIGNED) {
+                continue;
+            }
+            // Сначала освобождаем водителя — если упало, поездка останется ASSIGNED и
+            // скедулер повторит попытку на следующем тике.
+            if (trip.getDriverId() != null) {
+                try {
+                    userGateway.releaseDriver(trip.getDriverId());
+                } catch (Exception ex) {
+                    log.warn("Skip cancelling trip {}: failed to release driver {}: {}",
+                            trip.getId(), trip.getDriverId(), ex.getMessage());
+                    continue;
+                }
+            }
+
+            trip.setStatus(TripStatus.CANCELLED);
+            cancelled++;
+
+            notificationGateway.enqueue(trip.getId(), "PASSENGER", trip.getPassengerId(),
+                    "Trip #" + trip.getId() + " was cancelled (not accepted in time)");
+            if (trip.getDriverId() != null) {
+                notificationGateway.enqueue(trip.getId(), "DRIVER", trip.getDriverId(),
+                        "Trip #" + trip.getId() + " was cancelled");
+            }
+        }
+        if (cancelled > 0) {
+            log.info("Cancelled {} stuck ASSIGNED trips (TTL {}s)", cancelled, assignedTtlSeconds);
+        }
+        return cancelled;
     }
 
     @Transactional(readOnly = true)

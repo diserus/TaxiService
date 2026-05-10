@@ -44,6 +44,9 @@ public class Trip {
     @Column
     private Short rating;
 
+    @Column(name = "idempotency_key", length = 64, updatable = false)
+    private String idempotencyKey;
+
     @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
     private OffsetDateTime createdAt;
 

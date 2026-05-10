@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface TripRepository extends JpaRepository<Trip, Long> {
 
@@ -16,6 +17,15 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
     List<Trip> findAllByDriverId(Long driverId);
 
     List<Trip> findAllByStatus(TripStatus status);
+
+    Optional<Trip> findByPassengerIdAndIdempotencyKey(Long passengerId, String idempotencyKey);
+
+    @Query("""
+            SELECT t FROM Trip t
+            WHERE t.status = com.taxi.trip.entity.TripStatus.ASSIGNED
+              AND t.updatedAt < :threshold
+            """)
+    List<Trip> findStuckAssigned(@Param("threshold") OffsetDateTime threshold);
 
     @Query("""
             SELECT COUNT(t),

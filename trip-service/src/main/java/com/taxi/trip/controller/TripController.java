@@ -23,8 +23,10 @@ public class TripController implements TripsApi {
     private final TripMapper mapper;
 
     @Override
-    public ResponseEntity<TripResponse> createTrip(TripRequest tripRequest) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(tripRequest));
+    public ResponseEntity<TripResponse> createTrip(TripRequest tripRequest, String idempotencyKey) {
+        TripService.CreateResult result = service.create(tripRequest, idempotencyKey);
+        HttpStatus status = result.created() ? HttpStatus.CREATED : HttpStatus.OK;
+        return ResponseEntity.status(status).body(result.trip());
     }
 
     @Override

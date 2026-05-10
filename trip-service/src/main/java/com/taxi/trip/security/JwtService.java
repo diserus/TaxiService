@@ -8,6 +8,10 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
+import java.util.Map;
 
 @Component
 public class JwtService {
@@ -24,5 +28,20 @@ public class JwtService {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    /**
+     * Выпускает короткоживущий системный токен для межсервисных вызовов
+     * из фоновых задач, где нет контекста пользователя.
+     */
+    public String issueSystem() {
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .subject("system")
+                .claims(Map.of("email", "system@taxi.internal", "role", "ADMIN"))
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(5, ChronoUnit.MINUTES)))
+                .signWith(key)
+                .compact();
     }
 }
